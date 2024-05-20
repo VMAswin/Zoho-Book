@@ -43083,14 +43083,14 @@ def purchase_by_vendor(request):
         subTotWOdeb = 0
         totjour =0
 
-        cust = Customer.objects.filter(company=cmp)
+        cust = Vendor.objects.filter(company=cmp)
         for c in cust:
             customerName = c.first_name +" "+c.last_name
             count = 0
             purch = 0
-            bil = Bill.objects.filter(Customer=c)
+            bil = Bill.objects.filter(Company=c.company)
             deb = debitnote.objects.filter(company=c.company)
-            recbil = Recurring_bills.objects.filter(customer_details=c)
+            recbil = Recurring_bills.objects.filter(company=c.company)
             # recInv = RecurringInvoice.objects.filter(customer=c, status = 'Saved')
             # crd = Credit_Note.objects.filter(customer=c, status = 'Saved')
         
@@ -43115,7 +43115,7 @@ def purchase_by_vendor(request):
             
            # + len(recInv) + len(crd)
 
-            count = len(bil)
+            count = len(bil) + len(recbil) + len(deb)
             details = {
                 'name': customerName,
                 'count':count,
@@ -43137,3 +43137,247 @@ def purchase_by_vendor(request):
     else:
         return redirect('/')
     
+def purchase_by_vendor_mail(request):
+    if 'login_id' in request.session:
+        log_id = request.session['login_id']
+        log_details= LoginDetails.objects.get(id=log_id)
+        if log_details.user_type == 'Company':
+            cmp = CompanyDetails.objects.get(login_details = log_details)
+            dash_details = CompanyDetails.objects.get(login_details=log_details)
+        elif log_details.user_type == 'Staff':
+            cmp = StaffDetails.objects.get(login_details = log_details).company
+            dash_details = StaffDetails.objects.get(login_details=log_details)
+
+        try:
+            if request.method == 'POST':
+                emails_string = request.POST['email_ids']
+                emails_list = [email.strip() for email in emails_string.split(',')]
+                email_message = request.POST['email_message']
+
+                trans = request.POST['transaction']
+                startDate = request.POST['start']
+                endDate = request.POST['end']
+                if startDate == "":
+                    startDate = None
+                if endDate == "":
+                    endDate = None
+
+                reportData = []
+                totbil = 0
+                totRecbil = 0
+                totdebNote = 0
+                subTot = 0
+                subTotWOdeb = 0
+
+                cust = Vendor.objects.filter(company=cmp)
+
+                for c in cust:
+                    customerName = c.first_name + " " + c.last_name
+                    count = 0
+                    purch = 0
+
+                    if startDate == None or endDate == None:
+                        if trans == "all":
+                            bil = Bill.objects.filter(Company=c.company)
+                            recbil = Recurring_bills.objects.filter(company=c.company)
+                            deb = debitnote.objects.filter(company=c.company)
+                        elif trans == 'Bill':
+                            bil = Bill.objects.filter(Company=c.company)
+                            recbil = None
+                            deb = None
+                        elif trans == 'Recurring Bill':
+                            bil = None
+                            recbil = Recurring_bills.objects.filter(company=c.company)
+                            deb = None
+                        elif trans == 'Debit Note':
+                            bil = None
+                            recbil = None
+                            deb = debitnote.objects.filter(company=c.company)
+                    else:
+                        if trans == 'all':
+                            bil = Bill.objects.filter(Company=c.company, Bill_date__range=[startDate, endDate])
+                            recbil = Recurring_bills.objects.filter(company=c.company, rec_bill_date__range=[startDate, endDate])
+                            deb = debitnote.objects.filter(company=c.company, debitnote_date__range=[startDate, endDate])
+                        elif trans == 'Bill':
+                            bil = Bill.objects.filter(Company=c.company, Bill_date__range=[startDate, endDate])
+                            recbil = None
+                            deb = None
+                        elif trans == 'Recurring Bill':
+                            bil = None
+                            recbil = Recurring_bills.objects.filter(company=c.company, rec_bill_date__range=[startDate, endDate])
+                            deb = None
+                        elif trans == 'Debit Note':
+                            bil = None
+                            recbil = None
+                            deb = debitnote.objects.filter(company=c.company, debitnote_date__range=[startDate, endDate])
+
+                    if bil:
+                        count += len(bil)
+                        for i in bil:
+                            purch += float(i.Grand_Total)
+                            totbil += float(i.Grand_Total)
+                            subTot += float(i.Sub_Total)
+                            subTotWOdeb += float(i.Sub_Total)
+
+                    if recbil:
+                        count += len(recbil)
+                        for r in recbil:
+                            purch += float(r.total)
+                            totRecbil += float(r.total)
+                            subTot += float(r.sub_total)
+                            subTotWOdeb += float(r.sub_total)
+
+                    if deb:
+                        count += len(deb)
+                        for n in deb:
+                            purch -= float(n.grandtotal)
+                            totdebNote += float(n.grandtotal)
+                            subTot -= float(n.subtotal)
+                    details = {
+                        'name': customerName,
+                        'count': count,
+                        'sales': purch
+                    }
+
+                    reportData.append(details)
+
+                totCust = len(cust)
+                totpurch = totbil + totRecbil - totdebNote
+                totpurchWOdebNote = totbil + totRecbil
+
+                context = {'reportData': reportData, 'cmp': cmp, 'startDate': startDate, 'endDate': endDate, 'totalCustomers': totCust, 'totalInvoice': totbil, 'totalRecInvoice': totRecbil, 'totalCreditNote': totdebNote, 'subtotal': subTot, 'subtotalWOCredit': subTotWOdeb, 'totalSale': totpurch, 'totalSaleWOCredit': totpurchWOdebNote}
+                template_path = 'zohomodules/Reports/purchase_by_vendor_mail.html'
+                template = get_template(template_path)
+
+                html  = template.render(context)
+                result = BytesIO()
+                pdf = pisa.pisaDocument(BytesIO(html.encode("ISO-8859-1")), result)
+                pdf = result.getvalue()
+                filename = f'Purchase by Vendor'
+                subject = f"Purchase by vendor"
+                # from django.core.mail import EmailMessage as EmailMsg
+                email = EmailMsg(subject, f"Hi,\nPlease find the attached Purchase by vendor Report. \n{email_message}\n\n--\nRegards,\n{cmp.company_name}\n{cmp.address}\n{cmp.state} - {cmp.country}\n{cmp.contact}", from_email=settings.EMAIL_HOST_USER, to=emails_list)
+                email.attach(filename, pdf, "application/pdf")
+                email.send(fail_silently=False)
+
+                messages.success(request, 'Purchase by vendor report details has been shared via email successfully..!')
+                return redirect(purchase_by_vendor)
+        except Exception as e:
+            messages.error(request, f'{e}')
+            return redirect(purchase_by_vendor)
+        
+def purchase_by_vendor_custom(request):
+    if 'login_id' in request.session:
+        log_id = request.session['login_id']
+        log_details= LoginDetails.objects.get(id=log_id)
+        if log_details.user_type == 'Company':
+            cmp = CompanyDetails.objects.get(login_details = log_details)
+            dash_details = CompanyDetails.objects.get(login_details=log_details)
+        elif log_details.user_type == 'Staff':
+            cmp = StaffDetails.objects.get(login_details = log_details).company
+            dash_details = StaffDetails.objects.get(login_details=log_details)
+
+        allmodules= ZohoModules.objects.get(company = cmp)
+
+        if request.method == 'GET':
+            trans = request.GET['transactions']
+            startDate = request.GET['from_date']
+            endDate = request.GET['to_date']
+            if startDate == "":
+                startDate = None
+            if endDate == "":
+                endDate = None
+
+            reportData = []
+            totbil = 0
+            totRecbil = 0
+            totdebNote = 0
+            subTot = 0
+            subTotWOdeb = 0
+
+            cust = Vendor.objects.filter(company=cmp)
+
+
+            for c in cust:
+                customerName = c.first_name +" "+c.last_name
+                count = 0
+                purch = 0
+
+                if startDate == None or endDate == None:
+                    if trans == "all":
+                        bil = Bill.objects.filter(Company=c.company)
+                        recbil = Recurring_bills.objects.filter(company=c.company)
+                        deb = debitnote.objects.filter(company=c.company)
+                    elif trans == 'Bill':
+                        bil = Bill.objects.filter(Company=c.company)
+                        recbil = None
+                        deb = None
+                    elif trans == 'Recurring Bill':
+                        bil = None
+                        recbil = Recurring_bills.objects.filter(company=c.company)
+                        deb = None
+                    elif trans == 'Debit Note':
+                        bil = None
+                        recbil = None
+                        deb = debitnote.objects.filter(company=c.company)
+                else:
+                    if trans == 'all':
+                        bil = Bill.objects.filter(Company=c.company, Bill_Date__range=[startDate, endDate])
+                        recbil = Recurring_bills.objects.filter(company=c.company, rec_bill_date__range=[startDate, endDate])
+                        deb = debitnote.objects.filter(company=c.company, debitnote_date__range=[startDate, endDate])
+                    elif trans == 'Bill':
+                        bil = Bill.objects.filter(Company=c.company, Bill_Date__range=[startDate, endDate])
+                        recbil = None
+                        deb = None
+                    elif trans == 'Recurring Bill':
+                        bil = None
+                        recbil = Recurring_bills.objects.filter(company=c.company, rec_bill_date__range=[startDate, endDate])
+                        deb = None
+                    elif trans == 'Debit Note':
+                        bil = None
+                        recbil = None
+                        deb = debitnote.objects.filter(company=c.company, debitnote_date__range=[startDate, endDate])
+
+                if bil:
+                    count += len(bil)
+                    for i in bil:
+                        purch += float(i.Grand_Total)
+                        totbil += float(i.Grand_Total)
+                        subTot += float(i.Sub_Total)
+                        subTotWOdeb += float(i.Sub_Total)
+
+                if recbil:
+                    count += len(recbil)
+                    for r in recbil:
+                        purch += float(r.total)
+                        totRecbil += float(r.total)
+                        subTot += float(r.sub_total)
+                        subTotWOdeb += float(r.sub_total)
+                
+                if deb:
+                    count += len(deb)
+                    for n in deb:
+                        purch -= float(n.grandtotal)
+                        totdebNote += float(n.grandtotal)
+                        subTot -= float(n.subtotal)
+                
+                details = {
+                    'name': customerName,
+                    'count':count,
+                    'purch':purch
+                }
+
+                reportData.append(details)
+
+            totCust = len(cust)
+            totSale = totbil + totRecbil - totdebNote
+            totpurchWOdebNote = totbil + totRecbil
+
+            context = {
+                'allmodules':allmodules, 'cmp':cmp,  'reportData':reportData,'totalCustomers':totCust, 'totalInvoice':totbil, 'totalRecInvoice':totRecbil, 'totalCreditNote': totdebNote,
+                'subtotal':subTot, 'subtotalWOCredit':subTotWOdeb, 'totalSale':totSale, 'totalSaleWOCredit':totpurchWOdebNote,
+                'startDate':startDate, 'endDate':endDate, 'transaction':trans,
+            }
+            return render(request,'zohomodules/Reports/purchase_by_vendor.html', context)
+    else:
+        return redirect('/')

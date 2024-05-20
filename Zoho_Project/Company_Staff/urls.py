@@ -931,6 +931,8 @@ urlpatterns = [
     path('shareREC_billDetailsReportToEmail',views.shareREC_billDetailsReportToEmail, name='shareREC_billDetailsReportToEmail'),
     #End
     path('purchase_by_vendor',views.purchase_by_vendor,name='purchase_by_vendor'),
+    path('purchase_by_vendor_mail',views.purchase_by_vendor_mail,name='purchase_by_vendor_mail'),
+    path('purchase_by_vendor_custom',views.purchase_by_vendor_custom,name='purchase_by_vendor_custom'),
 
     re_path(r'^static/(?P<path>.*)$', serve,{'document_root': settings.STATIC_ROOT}),
 ]

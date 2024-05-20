@@ -208,7 +208,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
                                 <button class="btn btn-warning" onclick="toggleContent()"><i class="fas fa-solid fa-gear"></i> Customize Report</button>
                                 <div id="contentDiv" class="content">
                                     <h6 style="color: white;">Customize Report</h6>
-                                    <form action="{% url 'salesByCustomerReportCustomized' %}" class="form reportCustomizeForm" method="get">
+                                    <form action="{% url 'purchase_by_vendor_custom' %}" class="form reportCustomizeForm" method="get">
                                         <div class="px-2">
                                             <label style="text-align:left ">From</label><br>
                                             <input name="from_date" class="inputdate form-control text-light" type="date" id="startDate" value="{{startDate}}" >
@@ -222,9 +222,9 @@ input[type="date"]::-webkit-calendar-picker-indicator {
                                             <label style="text-align:left;color: white;">Purchase</label><br>
                                             <select name="transactions" id="salesTransactions" class="form-control text-light" style="background-color: #000;">
                                                 <option value="all">All</option>
-                                                <option value="invoice">Bill</option>
-                                                <option value="recurring_invoice">Recurring Bill</option>
-                                                <option value="credit_notes">Debit Notes</option>
+                                                <option value="Bill">Bill</option>
+                                                <option value="Recurring Bill">Recurring Bill</option>
+                                                <option value="Debit Note">Debit Note</option>
                                             </select>
                                         </div>
                                         <div class="d-flex px-2 mt-3 mb-4">
@@ -362,7 +362,7 @@ input[type="date"]::-webkit-calendar-picker-indicator {
               </button>
             </div>
             <div class="modal-body mx-3" style="background-color: #000;">
-              <form action="{% url 'shareSalesByCustomerReportToEmail' %}" method="post" id="share_to_email_form" class="needs-validation" novalidate enctype="multipart/form-data">
+              <form action="{% url 'purchase_by_vendor_mail' %}" method="post" id="share_to_email_form" class="needs-validation" novalidate enctype="multipart/form-data">
                 {%csrf_token%}
                 <div class="form-group">
                     <label for="emailIds">Email IDs</label>
