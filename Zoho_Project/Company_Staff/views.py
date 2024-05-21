@@ -43088,12 +43088,11 @@ def purchase_by_vendor(request):
             customerName = c.first_name +" "+c.last_name
             count = 0
             purch = 0
-            bil = Bill.objects.filter(Company=c.company)
-            deb = debitnote.objects.filter(company=c.company)
-            recbil = Recurring_bills.objects.filter(company=c.company)
+            bil = Bill.objects.filter(Vendor=c.id)
+            deb = debitnote.objects.filter(vendor=c.id)
+            recbil = Recurring_bills.objects.filter(vendor_details=c.id)
             # recInv = RecurringInvoice.objects.filter(customer=c, status = 'Saved')
             # crd = Credit_Note.objects.filter(customer=c, status = 'Saved')
-        
             
 
             for i in bil:
@@ -43113,8 +43112,6 @@ def purchase_by_vendor(request):
                 totdebNote += float(d.grandtotal)
                 subTot -= float(d.subtotal)
             
-           # + len(recInv) + len(crd)
-
             count = len(bil) + len(recbil) + len(deb)
             details = {
                 'name': customerName,
@@ -43122,11 +43119,10 @@ def purchase_by_vendor(request):
                 'purch':purch
             }
             reportData.append(details)
-
+        
         totCust = len(cust)
         totSale = totbil + totRecbil - totdebNote 
         totSaleWOdebNote = totbil + totRecbil 
-
         context = {
             'allmodules':allmodules, 'details':dash_details,'log_details':log_details , 'cmp':cmp,'reportData':reportData,
             'totalCustomers':totCust, 'totalInvoice':totbil, 'totalRecInvoice':totRecbil, 'totalCreditNote': totdebNote,
@@ -43178,38 +43174,38 @@ def purchase_by_vendor_mail(request):
 
                     if startDate == None or endDate == None:
                         if trans == "all":
-                            bil = Bill.objects.filter(Company=c.company)
-                            recbil = Recurring_bills.objects.filter(company=c.company)
-                            deb = debitnote.objects.filter(company=c.company)
+                            bil = Bill.objects.filter(Vendor=c.id)
+                            recbil = Recurring_bills.objects.filter(vendor_details=c.id)
+                            deb = debitnote.objects.filter(vendor=c.id)
                         elif trans == 'Bill':
-                            bil = Bill.objects.filter(Company=c.company)
+                            bil = Bill.objects.filter(Vendor=c.id)
                             recbil = None
                             deb = None
                         elif trans == 'Recurring Bill':
                             bil = None
-                            recbil = Recurring_bills.objects.filter(company=c.company)
+                            recbil = Recurring_bills.objects.filter(vendor_details=c.id)
                             deb = None
                         elif trans == 'Debit Note':
                             bil = None
                             recbil = None
-                            deb = debitnote.objects.filter(company=c.company)
+                            deb = debitnote.objects.filter(vendor=c.id)
                     else:
                         if trans == 'all':
-                            bil = Bill.objects.filter(Company=c.company, Bill_date__range=[startDate, endDate])
-                            recbil = Recurring_bills.objects.filter(company=c.company, rec_bill_date__range=[startDate, endDate])
-                            deb = debitnote.objects.filter(company=c.company, debitnote_date__range=[startDate, endDate])
+                            bil = Bill.objects.filter(Vendor=c.id, Bill_date__range=[startDate, endDate])
+                            recbil = Recurring_bills.objects.filter(vendor_details=c.id, rec_bill_date__range=[startDate, endDate])
+                            deb = debitnote.objects.filter(vendor=c.id, debitnote_date__range=[startDate, endDate])
                         elif trans == 'Bill':
-                            bil = Bill.objects.filter(Company=c.company, Bill_date__range=[startDate, endDate])
+                            bil = Bill.objects.filter(Vendor=c.id, Bill_date__range=[startDate, endDate])
                             recbil = None
                             deb = None
                         elif trans == 'Recurring Bill':
                             bil = None
-                            recbil = Recurring_bills.objects.filter(company=c.company, rec_bill_date__range=[startDate, endDate])
+                            recbil = Recurring_bills.objects.filter(vendor_details=c.id, rec_bill_date__range=[startDate, endDate])
                             deb = None
                         elif trans == 'Debit Note':
                             bil = None
                             recbil = None
-                            deb = debitnote.objects.filter(company=c.company, debitnote_date__range=[startDate, endDate])
+                            deb = debitnote.objects.filter(vendor=c.id, debitnote_date__range=[startDate, endDate])
 
                     if bil:
                         count += len(bil)
@@ -43305,38 +43301,38 @@ def purchase_by_vendor_custom(request):
 
                 if startDate == None or endDate == None:
                     if trans == "all":
-                        bil = Bill.objects.filter(Company=c.company)
-                        recbil = Recurring_bills.objects.filter(company=c.company)
+                        bil = Bill.objects.filter(Vendor=c.id)
+                        recbil = Recurring_bills.objects.filter(vendor_details=c.id)
                         deb = debitnote.objects.filter(company=c.company)
                     elif trans == 'Bill':
-                        bil = Bill.objects.filter(Company=c.company)
+                        bil = Bill.objects.filter(Vendor=c.id)
                         recbil = None
                         deb = None
                     elif trans == 'Recurring Bill':
                         bil = None
-                        recbil = Recurring_bills.objects.filter(company=c.company)
+                        recbil = Recurring_bills.objects.filter(vendor_details=c.id)
                         deb = None
                     elif trans == 'Debit Note':
                         bil = None
                         recbil = None
-                        deb = debitnote.objects.filter(company=c.company)
+                        deb = debitnote.objects.filter(vendor=c.id)
                 else:
                     if trans == 'all':
-                        bil = Bill.objects.filter(Company=c.company, Bill_Date__range=[startDate, endDate])
-                        recbil = Recurring_bills.objects.filter(company=c.company, rec_bill_date__range=[startDate, endDate])
-                        deb = debitnote.objects.filter(company=c.company, debitnote_date__range=[startDate, endDate])
+                        bil = Bill.objects.filter(Vendor=c.id, Bill_Date__range=[startDate, endDate])
+                        recbil = Recurring_bills.objects.filter(vendor_details=c.id, rec_bill_date__range=[startDate, endDate])
+                        deb = debitnote.objects.filter(vendor=c.id, debitnote_date__range=[startDate, endDate])
                     elif trans == 'Bill':
-                        bil = Bill.objects.filter(Company=c.company, Bill_Date__range=[startDate, endDate])
+                        bil = Bill.objects.filter(Vendor=c.id, Bill_Date__range=[startDate, endDate])
                         recbil = None
                         deb = None
                     elif trans == 'Recurring Bill':
                         bil = None
-                        recbil = Recurring_bills.objects.filter(company=c.company, rec_bill_date__range=[startDate, endDate])
+                        recbil = Recurring_bills.objects.filter(vendor_details=c.id, rec_bill_date__range=[startDate, endDate])
                         deb = None
                     elif trans == 'Debit Note':
                         bil = None
                         recbil = None
-                        deb = debitnote.objects.filter(company=c.company, debitnote_date__range=[startDate, endDate])
+                        deb = debitnote.objects.filter(vendor=c.id, debitnote_date__range=[startDate, endDate])
 
                 if bil:
                     count += len(bil)
